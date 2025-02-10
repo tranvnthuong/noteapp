@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showNote(id);
       } else {
         try {
-          const response = await fetch(`${WEBSERVER}/api/notes/${id}`);
+          const response = await fetch(`${WEBSERVER}/${id}`);
           if (response.ok) {
             let data = await response.json();
             const transaction = db.transaction('notes', 'readwrite');
@@ -840,9 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function getCaptcha() {
     try {
-      let response = await fetch(
-        `${WEBSERVER}/api/notes/get-verification-code`
-      );
+      let response = await fetch(`${WEBSERVER}/get-verification-code`);
       if (!response.ok) {
         return { ok: false, status: response.status };
       }
@@ -969,7 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
       request.onsuccess = async function (event) {
         const note = event.target.result;
         try {
-          let response = await fetch(`${WEBSERVER}/api/notes`, {
+          let response = await fetch(WEBSERVER, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1179,7 +1177,7 @@ document.addEventListener('DOMContentLoaded', () => {
               return { message: 'Found a note', note: noteData };
             } else {
               try {
-                const response = await fetch(`${WEBSERVER}/api/notes/${id}
+                const response = await fetch(`${WEBSERVER}/${id}
               `);
                 if (!response.ok) {
                   let data = await response.json();
@@ -1350,7 +1348,6 @@ document.addEventListener('DOMContentLoaded', () => {
     .getElementById('addAndShare')
     .addEventListener('click', async (event) => {
       if (_emptynote) return;
-      n;
       const btnEl = event.target;
       if (blockSpam) {
         Toast.fire({
@@ -1408,7 +1405,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: newnote.message,
               });
             } else {
-              const response = await fetch(`${WEBSERVER}/api/notes`, {
+              const response = await fetch(WEBSERVER, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

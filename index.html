@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <title>Take quick notes online</title>
+    <meta
+      name="description"
+      content="Take quick notes, share online notes on all platforms (Ghi chú nhanh, ghi chú trực tuyến chia sẻ trên trên mọi nền tảng)"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css"
+    />
+    <link href="static/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div
+      class="modal fade"
+      id="shareModal"
+      tabindex="-1"
+      role="dialog"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" data-i18n="share_note">Chia sẻ ghi chú</h5>
+          </div>
+          <div class="modal-body">
+            <div class="container-fluid">
+              <div id="verifySharing" class="row g-2 text-center">
+                <div class="col-12">
+                  <p data-i18n="enter_captcha">Nhập mã xác minh để chia sẻ</p>
+                  <img class="captcha-img" src="assets/captchabg.jpg" />
+                  <span id="cacha">000000</span>
+                  <button class="btn btn-outline-dark" id="refreshCaptcha">
+                    <i class="fa-solid fa-rotate-right"></i>
+                  </button>
+                </div>
+                <div class="col-6" style="margin-left: 20%">
+                  <input
+                    class="form-control"
+                    id="cachaIput"
+                    data-i18n="placeholder_captcha"
+                    placeholder="Mã xác minh"
+                    autocomplete="off"
+                    required
+                  />
+                </div>
+                <div class="col-1">
+                  <button class="btn btn-outline-primary" id="submitSharing">
+                    <i class="fa-solid fa-share-nodes"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="shareWithId" class="row g-2 text-center d-none">
+                <div class="col-12">
+                  <p data-i18n="share_with_id">Chia sẻ với ID</p>
+                  <input
+                    class="form-control text-center"
+                    style="margin-bottom: 15px"
+                    id="idNoteInput"
+                    data-i18n="placeholder_id"
+                    placeholder="ID duy nhất (6 chữ số) (Có thể để trống)"
+                    autocomplete="off"
+                    required
+                  />
+                  <img class="captcha-img" src="./captchabg.jpg" />
+                  <span id="cacha2">000000</span>
+                  <button class="btn btn-outline-dark" id="refreshCaptcha">
+                    <i class="fa-solid fa-rotate-right"></i>
+                  </button>
+                </div>
+                <div class="col-6" style="margin-left: 20%; margin-top: 20px">
+                  <input
+                    class="form-control"
+                    id="cachaIput2"
+                    data-i18n="placeholder_captcha"
+                    placeholder="Mã xác minh"
+                    autocomplete="off"
+                    required
+                  />
+                </div>
+                <div class="col-1" style="margin-top: 20px">
+                  <button class="btn btn-outline-primary" id="submitSharing2">
+                    <i class="fa-solid fa-share-from-square"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="sharePopup" class="row g-2 d-none">
+                <div class="col-12 text-center">
+                  <span data-i18n="note_code">Mã ghi chú:</span>
+                  <span id="idNote"></span>
+                  <input
+                    class="form-control mt-2"
+                    id="linkInput"
+                    readonly
+                    style="text-align: center"
+                  />
+                  <div class="col-12" style="margin-top: 16px">
+                    <button
+                      class="btn btn-outline-success"
+                      data-toggle="tooltip"
+                      data-i18n="copylink_tooltip"
+                      title="Sao chép liên kết"
+                      onclick="copyLink()"
+                    >
+                      <i class="fa-solid fa-link"></i>
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      data-toggle="tooltip"
+                      data-i18n="createqr_tooltip"
+                      title="Tạo mã QR"
+                      onclick="createQRLink()"
+                    >
+                      <i class="fa-solid fa-qrcode"></i>
+                    </button>
+                    <button
+                      class="btn btn-outline-primary"
+                      data-toggle="tooltip"
+                      data-i18n="downloadnote_tooltip"
+                      title="Tải xuống ghi chú"
+                      onclick="downloadNote()"
+                    >
+                      <i class="fa-solid fa-download"></i>
+                    </button>
+                    <div
+                      class="col-12 d-flex flex-wrap justify-content-center text-center mt-2 d-none"
+                      id="qrLayout"
+                    >
+                      <p class="col-12" data-i18n="scan_qrcode_to_access_note">
+                        Quét mã QR để truy cập ghi chú
+                      </p>
+                      <div id="qrOutput"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal fade"
+      id="importModal"
+      tabindex="-1"
+      role="dialog"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" data-i18n="import_notes_from_file">
+              Nhập ghi chú từ file backup
+            </h5>
+          </div>
+          <div class="modal-body">
+            <div class="col-12">
+              <label for="importfiles">
+                <b data-i18n="select_json_file"
+                  >Chọn file có phần mở rộng .json</b
+                >
+              </label>
+              <input
+                class="form-control"
+                id="importfiles"
+                type="file"
+                accept="application/json"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="modal fade"
+      id="informationModal"
+      tabindex="-1"
+      role="dialog"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" data-i18n="app_info_title">
+              Thông tin ứng dụng
+            </h5>
+          </div>
+          <div class="modal-body">
+            <div id="selectLanguage">
+              <div class="col-12">
+                <label for="languageSelect"
+                  ><b data-i18n="language">Ngôn ngữ ứng dụng</b></label
+                >
+                <select class="form-select" id="languageSelect">
+                  <option value="vi">Tiếng Việt</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+            <div id="webInformation">
+              <div class="col-12 text-center">
+                <p>
+                  <b data-i18n="app_info_des"
+                    >Ứng dụng Ghi chú trực tuyến phiên bản 1.0</b
+                  >
+                </p>
+                <span data-i18n="owner">Chủ sở hữu: </span>
+                <i>Trần Văn Thượng</i>
+                <br />
+                <a href="https://facebook.com/thuongwbw" target="_blank"
+                  ><i class="fa-brands fa-square-facebook"></i
+                ></a>
+                <a href="https://m.me/thuongwbw" target="_blank">
+                  <i class="fa-brands fa-facebook-messenger"></i
+                ></a>
+                <a href="#" onclick="event.preventDefault()"
+                  ><i class="fa-brands fa-instagram"></i
+                ></a>
+                <a href="#" onclick="event.preventDefault()">
+                  <i class="fa-brands fa-tiktok"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="popup" id="popup" tabindex="-1" aria-hidden="true">
+      <button
+        class="circle-button"
+        id="closePopup"
+        data-toggle="tooltip"
+        data-i18n="popup_close_tooltip"
+        title="Đóng"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <button
+        class="circle-button"
+        id="addNote"
+        data-toggle="tooltip"
+        data-i18n="popup_newsave_tooltip"
+        title="Lưu mới"
+      >
+        <i class="fa-solid fa-floppy-disk"></i>
+      </button>
+      <button
+        class="circle-button"
+        id="addAndShare"
+        data-toggle="tooltip"
+        data-i18n="popup_sharenow_tooltip"
+        title="Chia sẻ ngay"
+      >
+        <i class="fa-solid fa-share-from-square"></i>
+      </button>
+      <button
+        class="circle-button"
+        id="updateNote"
+        data-toggle="tooltip"
+        data-i18n="popup_savechange_tooltip"
+        title="Lưu thay đổi"
+        style="z-index: 12; display: none"
+      >
+        <i class="fa-solid fa-square-pen"></i>
+      </button>
+      <h6 id="popupHeader" data-i18n="new_note">Ghi chú mới</h6>
+      <div id="quilljs"></div>
+    </div>
+    <header class="sidebar">
+      <ul id="ul" class="hiding">
+        <div class="plus" id="plus"><i class="fa-solid fa-plus"></i></div>
+        <li>
+          <button
+            data-toggle="tooltip"
+            data-i18n="create_note_tooltip"
+            title="Tạo một ghi chú"
+            onclick="sidebar('newNote')"
+          >
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </li>
+        <li>
+          <button
+            data-toggle="tooltip"
+            data-i18n="enter_notecode_tooltip"
+            title="Nhập mã ghi chú"
+            onclick="sidebar('useCode')"
+          >
+            <i class="fa-solid fa-terminal"></i>
+          </button>
+        </li>
+        <li>
+          <button
+            data-toggle="tooltip"
+            data-i18n="import_notefile_tooltip"
+            title="Nhập ghi chú từ file"
+            onclick="sidebar('importFile')"
+          >
+            <i class="fa-solid fa-file-import"></i>
+          </button>
+        </li>
+        <li>
+          <button
+            data-toggle="tooltip"
+            data-i18n="language_tooltip"
+            title="Ngôn ngữ"
+            onclick="sidebar('language')"
+          >
+            <i class="fa-solid fa-language"></i>
+          </button>
+        </li>
+        <li>
+          <button
+            data-toggle="tooltip"
+            data-i18n="information_tooltip"
+            title="Thông tin trang web"
+            onclick="sidebar('info')"
+          >
+            <i class="fa-solid fa-circle-info"></i>
+          </button>
+        </li>
+      </ul>
+    </header>
+    <main class="main-content">
+      <i id="searchIcon" class="fa fa-search"></i>
+      <input
+        id="searchInput"
+        type="text"
+        data-i18n="placeholder_search"
+        placeholder="Tìm kiếm..."
+        autocomplete="off"
+      />
+      <button id="clearSearch"><i class="fa-solid fa-xmark"></i></button>
+      <h1 data-i18n="online_note">Online Notes</h1>
+      <div class="notes-list">
+        <div class="show-note d-none">
+          <button
+            class="circle-button"
+            id="shareNote"
+            data-toggle="tooltip"
+            data-i18n="share_tooltip"
+            title="Chia sẻ"
+          >
+            <i class="fa-solid fa-share-nodes"></i>
+          </button>
+          <button
+            class="circle-button"
+            id="showEdit"
+            data-toggle="tooltip"
+            data-i18n="edit_tooltip"
+            title="Sửa ghi chú"
+          >
+            <i class="fa fa-file-pen"></i>
+          </button>
+          <button
+            class="circle-button"
+            id="showDelete"
+            data-toggle="tooltip"
+            data-i18n="delete_tooltip"
+            title="Xóa"
+          >
+            <i class="fa fa-trash"></i>
+          </button>
+          <button
+            class="circle-button"
+            id="closeShow"
+            data-toggle="tooltip"
+            data-i18n="close_tooltip"
+            title="Đóng"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          <p class="updated"></p>
+          <div class="ql-container ql-snow">
+            <div class="ql-editor"></div>
+          </div>
+        </div>
+        <div class="empty-note" class="col-12 text-center">
+          <span data-i18n="empty_des_1">Chưa có ghi chú nào!</span>
+          <br />
+          <span data-i18n="empty_des_2">Click vào để thêm một ghi chú mới</span>
+          <i
+            class="fa-solid fa-plus"
+            style="
+              border-radius: 50%;
+              padding: 2px;
+              color: #fff;
+              background-color: #3e280e;
+              cursor: pointer;
+            "
+            onclick="document.getElementById('plus').click()"
+          ></i>
+        </div>
+        <div class="notes-toolbar">
+          <select id="sortNotes">
+            <option value="date" data-i18n="sort_by_date">
+              Thứ tự theo thời gian
+            </option>
+            <option value="title" data-i18n="sort_by_title">
+              Thứ tự theo tên (tiêu đề)
+            </option>
+            <option value="content" data-i18n="sort_by_content">
+              Thứ tự theo tên (nội dung)
+            </option>
+          </select>
+          <div>
+            <button
+              id="downloadSelected"
+              data-toggle="tooltip"
+              data-i18n="download_selected_tooltip"
+              title="Tải xuóng mục đã chọn"
+              style="display: none"
+            >
+              <i class="fa fa-download"></i>
+            </button>
+            <button
+              id="deleteSelected"
+              data-toggle="tooltip"
+              data-i18n="delete_selected_tooltip"
+              title="Xóa mục đã chọn"
+              style="display: none"
+            >
+              <i class="fa fa-trash"></i>
+            </button>
+            <button
+              data-toggle="tooltip"
+              data-i18n="select_all_tooltip"
+              title="Chọn tất cả"
+              id="selectAll"
+              style="display: none"
+            >
+              <i class="fa-solid fa-circle-check"></i>
+            </button>
+            <button id="multiSelect" data-i18n="select">Chọn</button>
+          </div>
+        </div>
+        <div class="note-container row g-2 d-flex flex-wrap"></div>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="static/script.js"></script>
+  </body>
+</html>

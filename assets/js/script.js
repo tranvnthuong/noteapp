@@ -316,20 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  let clearSearchBtn = document.getElementById('clearSearch');
-  clearSearchBtn.onclick = function () {
-    document.getElementById('searchInput').value = '';
-    clearSearchBtn.style.opacity = '0';
-    clearSearchBtn.style.pointerEvents = 'none';
-    document
-      .querySelectorAll('[data-note-id]')
-      .forEach((e) => e.classList.remove('d-none'));
-    let searchInNote = document.querySelector('.show-note');
-    if (searchInNote) {
-      resetHighlight(searchInNote.querySelector('div'));
-    }
-  };
-
   function resetHighlight(container) {
     const walker = document.createTreeWalker(
       container,
@@ -352,10 +338,9 @@ document.addEventListener('DOMContentLoaded', () => {
     'input',
     debounce((e) => {
       let searchInNote = document.querySelector('.show-note');
-
       if (e.target.value.trim() === '') {
-        clearSearchBtn.style.opacity = '0';
-        clearSearchBtn.style.pointerEvents = 'none';
+        document.getElementById('searchIcon').classList.remove('found');
+        document.getElementById('searchIcon').classList.remove('not-found');
         if (searchInNote.querySelector('.ql-container .ql-editor').innerHTML) {
           resetHighlight(searchInNote.querySelector('div'));
         } else {
@@ -365,11 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return;
       }
-      clearSearchBtn.style.opacity = '1';
-      clearSearchBtn.style.pointerEvents = 'all';
 
       let query = e.target.value;
-
       if (searchInNote.querySelector('.ql-container .ql-editor').innerHTML) {
         let container = searchInNote.querySelector('div');
         resetHighlight(container);
@@ -381,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
           false
         );
 
+        let found = false;
         while (walker.nextNode()) {
           const currentNode = walker.currentNode;
           if (
@@ -403,9 +386,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentNode
               );
             }
-
             currentNode.parentNode.removeChild(currentNode);
+            document.getElementById('searchIcon').classList.add('found');
+            document.getElementById('searchIcon').classList.remove('not-found');
+            found = true;
           }
+        }
+
+        if (!found) {
+          document.getElementById('searchIcon').classList.remove('found');
+          document.getElementById('searchIcon').classList.add('not-found');
         }
 
         const firstMatch = container.querySelector('mark');
@@ -423,13 +413,21 @@ document.addEventListener('DOMContentLoaded', () => {
             let text = note.textContent.toLowerCase();
 
             if (!text.includes(query) && !title.includes(query)) {
+              //Not found
               document
                 .querySelector(`div[data-note-id="${note.id}"]`)
                 .classList.add('d-none');
+              document.getElementById('searchIcon').classList.remove('found');
+              document.getElementById('searchIcon').classList.add('not-found');
             } else {
+              //Found
               document
                 .querySelector(`div[data-note-id="${note.id}"]`)
                 .classList.remove('d-none');
+              document.getElementById('searchIcon').classList.add('found');
+              document
+                .getElementById('searchIcon')
+                .classList.remove('not-found');
             }
           });
         };
@@ -484,7 +482,6 @@ document.addEventListener('DOMContentLoaded', () => {
       top: 0,
       behavior: 'smooth',
     });
-    clearSearchBtn.click();
     document
       .getElementById('searchInput')
       .setAttribute('placeholder', translations.search_in_note);
@@ -1015,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sharingModalContainer('sharePopup');
         createModalController('shareModal').show();
       } else {
+        if (isOffline()) return;
         if (blockSpam) {
           Toast.fire({
             icon: 'warning',
@@ -1139,11 +1137,13 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'useCode':
         Swal.fire({
           title: translations.enter_note_code,
-          input: 'text',
+          input: 'number',
+          inputmode: 'numeric',
           inputPlaceholder: translations.code_placeholder,
           inputAttributes: {
-            autocapitalize: 'off',
-            autocomplete: 'off',
+            min: 100000, // Số nhỏ nhất (6 chữ số)
+            max: 999999999, // Số lớn nhất (9 chữ số)
+            step: 1, // Chỉ cho phép nhập số nguyên
           },
           showCancelButton: true,
           cancelButtonText: translations.cancel,
@@ -1152,10 +1152,8 @@ document.addEventListener('DOMContentLoaded', () => {
           preConfirm: async (id) => {
             if (id.trim() === '') {
               return Swal.showValidationMessage(translations.note_code_require);
-            } else if (!id.match(/^\d{6}$/)) {
-              return Swal.showValidationMessage(
-                translations.six_numbers_require
-              );
+            } else if (!id.match(/^\d{6,9}$/)) {
+              return Swal.showValidationMessage(translations.numbers_require);
             }
             id = parseInt(id, 10);
             const transaction = db.transaction('notes', 'readonly');
@@ -1299,7 +1297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hour12: false,
       });
 
-      id = id ?? Math.floor(Math.random() * (999999 - 100000)) + 100000;
+      id = id ?? Math.floor(Math.random() * (999999999 - 100000)) + 100000;
 
       const notes = {
         id: id,
@@ -1348,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .getElementById('addAndShare')
     .addEventListener('click', async (event) => {
       if (_emptynote) return;
+      if (isOffline()) return;
       const btnEl = event.target;
       if (blockSpam) {
         Toast.fire({
@@ -1372,16 +1371,16 @@ document.addEventListener('DOMContentLoaded', () => {
             event
           ) {
             let id = document.getElementById('idNoteInput').value;
-            if (id.length > 1 && id.length !== 6 && !id.match(/^\d*$/)) {
+            if (id.trim() === '') {
+              id = null;
+            } else if (!id.match(/^\d{6,9}$/)) {
               Toast.fire({
                 icon: 'warning',
                 title: translations.id_require_options,
               });
               return;
-            } else if (id.match(/^\d{6}$/)) {
+            } else {
               id = parseInt(id, 10);
-            } else if (id.trim() === '') {
-              id = null;
             }
             const captchaInput = document.getElementById('cachaIput2');
             if (!validateCaptcha(captchaInput)) {
@@ -1595,4 +1594,16 @@ document.addEventListener('DOMContentLoaded', () => {
       child.style.top = '0';
     }
   });
+
+  function isOffline() {
+    if (navigator.onLine) return false;
+    else {
+      Swal.fire({
+        icon: 'warning',
+        title: translations.you_are_offline,
+        text: translations.turn_on_wifi_or_mobile_data,
+      });
+      return true;
+    }
+  }
 });

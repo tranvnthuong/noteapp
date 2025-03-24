@@ -14,8 +14,7 @@
   top: 0;
   left: 0;
   width: 80px;
-  height: 100vh;
-  border-right: 2px solid #e2e2e2;
+  height: 77vh;
   padding: 20px 0 0 20px;
   transition: transform 0.3s ease-in-out;
   z-index: 99;
@@ -133,7 +132,7 @@
   position: relative;
   margin-top: 15px;
   width: 99%;
-  height: 80vh;
+  height: 77vh;
   padding: 35px 15px 15px 15px;
   border: 2px solid #e2e2e2;
   background-color: #fff;
@@ -220,43 +219,42 @@
   }
 }
 
-.main-content input {
+.search-box {
+  position: relative;
+}
+
+.search-box input {
   width: 99%;
   outline: none;
   border: 2px solid #e2e2e2;
   border-radius: 15px;
   padding: 5px 5px 5px 30px;
   font-size: 12px;
-  margin-top: 25px;
+  margin-top: 5px;
   transition: 0.8s;
 }
 
-.main-content input:focus {
+.search-box input:focus {
   border: 2px solid #84efff;
 }
 
-#searchIcon {
+.search-box i {
   position: absolute;
-  margin: 35px 0 0 15px;
+  top: 42%;
+  left: 20px;
+  transform: translateX(-50%);
   pointer-events: none;
   opacity: 0.6;
   font-size: 12px;
-  transition: 0.8s;
+  transition: color 0.8s;
 }
 
-#clearSearch {
-  position: absolute;
-  margin: 28px 0 0 -30px;
-  border: none;
-  width: 24px;
-  border-radius: 50%;
-  pointer-events: none;
-  vertical-align: middle;
-  white-space: nowrap;
-  opacity: 0;
-  font-size: 16px;
-  height: 24px;
-  transition: 0.5s;
+.search-box i.found {
+  color: #11ff00;
+}
+
+.search-box i.not-found {
+  color: #dc3545;
 }
 
 .notes-list #emptyMessage {
@@ -389,19 +387,19 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 90vw;
+  width: 95vw;
   height: 85vh;
   padding: 20px;
   border-radius: 15px;
-  background-color: #e0eaf4;
+  background-color: #fefefe;
   transform: translate(-50%, -50%);
-  z-index: 100;
-  border: 2px solid #fcd53f;
+  border: 2px solid #84efff;
   box-sizing: border-box;
   overflow: hidden;
   animation: none;
   opacity: 0;
   pointer-events: none;
+  z-index: 100;
 }
 
 .popup.show {
@@ -439,6 +437,15 @@
   }
 }
 
+@media screen and (min-width: 1024px) {
+  .popup {
+    width: 70vw;
+  }
+  .main-content {
+    margin: 0 15% 0 15%;
+  }
+}
+
 #quilljs {
   position: relative;
   min-height: 90%;
@@ -458,7 +465,7 @@
 
 .note-element .note-checkbox {
   position: absolute;
-  top: -10%;
+  top: 5%;
   right: 5%;
   width: 25px;
   height: 25px;
@@ -573,4 +580,15 @@ button i {
 
 ::-webkit-scrollbar-track {
   display: none;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #222;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 14px;
 }

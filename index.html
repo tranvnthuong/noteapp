@@ -26,7 +26,7 @@
       referrerpolicy="no-referrer"
     />
     <link
-      href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+      href="https://cdn.jsdelivr.net/npm/easymde@2.20.0/dist/easymde.min.css"
       rel="stylesheet"
     />
     <link
@@ -297,7 +297,7 @@
         <i class="fa-solid fa-square-pen"></i>
       </button>
       <h6 id="popupHeader" data-i18n="new_note">Ghi chú mới</h6>
-      <div id="quilljs"></div>
+      <textarea id="editor"></textarea>
     </div>
     <header class="sidebar">
       <ul id="ul" class="hiding">
@@ -368,46 +368,55 @@
       </div>
       <div class="notes-list">
         <div class="show-note d-none">
-          <button
-            class="circle-button"
-            id="shareNote"
-            data-toggle="tooltip"
-            data-i18n="share_tooltip"
-            title="Chia sẻ"
-          >
-            <i class="fa-solid fa-share-nodes"></i>
-          </button>
-          <button
-            class="circle-button"
-            id="showEdit"
-            data-toggle="tooltip"
-            data-i18n="edit_tooltip"
-            title="Sửa ghi chú"
-          >
-            <i class="fa fa-file-pen"></i>
-          </button>
-          <button
-            class="circle-button"
-            id="showDelete"
-            data-toggle="tooltip"
-            data-i18n="delete_tooltip"
-            title="Xóa"
-          >
-            <i class="fa fa-trash"></i>
-          </button>
-          <button
-            class="circle-button"
-            id="closeShow"
-            data-toggle="tooltip"
-            data-i18n="close_tooltip"
-            title="Đóng"
-          >
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-          <p class="updated"></p>
-          <div class="ql-container ql-snow">
-            <div class="ql-editor"></div>
+          <div class="show-note-toolbar">
+            <button
+              class="circle-button"
+              id="togglefullScreen"
+              data-toggle="tooltip"
+              data-i18n="fullscreen_tooltip"
+              title="Phóng to"
+            >
+              <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+            </button>
+            <button
+              class="circle-button"
+              id="shareNote"
+              data-toggle="tooltip"
+              data-i18n="share_tooltip"
+              title="Chia sẻ"
+            >
+              <i class="fa-solid fa-share-nodes"></i>
+            </button>
+            <button
+              class="circle-button"
+              id="showEdit"
+              data-toggle="tooltip"
+              data-i18n="edit_tooltip"
+              title="Sửa ghi chú"
+            >
+              <i class="fa fa-file-pen"></i>
+            </button>
+            <button
+              class="circle-button"
+              id="showDelete"
+              data-toggle="tooltip"
+              data-i18n="delete_tooltip"
+              title="Xóa"
+            >
+              <i class="fa fa-trash"></i>
+            </button>
+            <button
+              class="circle-button"
+              id="closeShow"
+              data-toggle="tooltip"
+              data-i18n="close_tooltip"
+              title="Đóng"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+            <p class="updated"></p>
           </div>
+          <div class="output-note" id="output"></div>
         </div>
         <div class="empty-note" class="col-12 text-center">
           <span data-i18n="empty_des_1">Chưa có ghi chú nào!</span>
@@ -482,10 +491,10 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quill-better-table"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/easymde@2.20.0/dist/easymde.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="assets/js/script.js"></script>
   </body>
 </html>

@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           store.createIndex('date', 'isoDate', { unique: false });
           store.createIndex('title', 'titleText', { unique: false });
-          store.createIndex('content', 'textContent', { unique: false });
+          store.createIndex('content', 'plainText', { unique: false });
         }
       };
 
@@ -31,32 +31,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  let sortNotesBy;
-  async function init() {
-    try {
-      db = await openDatabase();
-
-      let sortNote = localStorage.getItem('sortby') ?? 'title';
-
-      document
-        .getElementById('sortNotes')
-        .querySelectorAll('option')
-        .forEach((element) => {
-          if (element.value === sortNote)
-            element.setAttribute('selected', true);
-        });
-
-      sortNotesBy = sortNote;
-
-      displayNotes(sortNotesBy);
-
-      getNoteInUrlParameter();
-    } catch (error) {
-      console.error(error);
+  const reloadToolTips = () => {
+    if (window.matchMedia('(hover: none)').matches) {
+      return;
     }
-  }
+    let tooltipTriggerList = [].slice.call(
+      document.querySelectorAll('[data-toggle="tooltip"]')
+    );
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      let tooltip = new bootstrap.Tooltip(tooltipTriggerEl);
+      let timer;
+      tooltipTriggerEl.addEventListener('mouseenter', () => {
+        tooltip.show();
+        timer = setTimeout(() => tooltip.hide(), 1500);
+      });
 
-  init();
+      tooltipTriggerEl.addEventListener('mouseleave', () => {
+        clearTimeout(timer);
+        tooltip.hide();
+      });
+    });
+  };
 
   let translations = {};
   async function fetchLanguageData(language) {
@@ -99,7 +94,213 @@ document.addEventListener('DOMContentLoaded', () => {
         button.title = translations[key];
       }
     });
-    reloadToolTips();
+  }
+
+  let sortNotesBy;
+  let easyMDE;
+  async function init() {
+    try {
+      db = await openDatabase();
+
+      let sortNote = localStorage.getItem('sortby') ?? 'title';
+
+      document
+        .getElementById('sortNotes')
+        .querySelectorAll('option')
+        .forEach((element) => {
+          if (element.value === sortNote)
+            element.setAttribute('selected', true);
+        });
+
+      sortNotesBy = sortNote;
+      displayNotes(sortNotesBy);
+      getNoteInUrlParameter();
+      await loadlanguage();
+      easyMDE = new EasyMDE({
+        element: document.getElementById('editor'),
+        spellChecker: false,
+        sideBySideFullscreen: false,
+        placeholder: `# ${translations.title}\n${translations.content}`,
+        insertTexts: {
+          horizontalRule: ['', '\n\n---\n\n'],
+          image: ['![Mô tả ảnh](https://', ')'],
+          link: ['[Tên liên kết](https://', ')'],
+          table: [
+            '\n\n|    Cột 1    |    Cột 2    |    Cột 3    |\n|   --------   |   --------   |   --------   |\n| Dữ liệu 1 | Dữ liệu 2 | Dữ liệu 3 |\n',
+            '\n',
+          ],
+        },
+        renderingConfig: {
+          codeSyntaxHighlighting: true,
+        },
+        previewRender: function (plainText) {
+          let html = marked.parse(plainText);
+          setTimeout(() => {
+            document.querySelectorAll('pre code').forEach((block) => {
+              hljs.highlightElement(block);
+              let language =
+                block.result?.language ||
+                block.className.replace('language-', '') ||
+                'Plain Text';
+              block.setAttribute('data-lang', language);
+            });
+          }, 10);
+          return html;
+        },
+        toolbar: [
+          {
+            name: 'bold',
+            action: EasyMDE.toggleBold,
+            className: 'fa fa-bold',
+            title: translations.bold,
+          },
+          {
+            name: 'italic',
+            action: EasyMDE.toggleItalic,
+            className: 'fa fa-italic',
+            title: translations.italic,
+          },
+          {
+            name: 'heading',
+            action: EasyMDE.toggleHeadingSmaller,
+            className: 'fa fa-header',
+            title: translations.heading,
+          },
+          '|',
+          {
+            name: 'quote',
+            action: EasyMDE.toggleBlockquote,
+            className: 'fa fa-quote-left',
+            title: translations.quote,
+          },
+          {
+            name: 'unordered-list',
+            action: EasyMDE.toggleUnorderedList,
+            className: 'fa fa-list-ul',
+            title: translations.unordered_list,
+          },
+          {
+            name: 'ordered-list',
+            action: EasyMDE.toggleOrderedList,
+            className: 'fa fa-list-ol',
+            title: translations.ordered_list,
+          },
+          '|',
+          {
+            name: 'link',
+            action: EasyMDE.drawLink,
+            className: 'fa fa-link',
+            title: translations.link,
+          },
+          {
+            name: 'image',
+            action: EasyMDE.drawImage,
+            className: 'fa fa-picture-o',
+            title: translations.image,
+          },
+          {
+            name: 'table',
+            action: EasyMDE.drawTable,
+            className: 'fa fa-table',
+            title: translations.table,
+          },
+          '|',
+          {
+            name: 'code',
+            action: EasyMDE.toggleCodeBlock,
+            className: 'fa fa-code',
+            title: translations.code,
+          },
+          {
+            name: 'horizontal-rule',
+            action: EasyMDE.drawHorizontalRule,
+            className: 'fa fa-minus',
+            title: translations.horizontal_rule,
+          },
+          {
+            name: 'superLargeText',
+            action: function (editor) {
+              const cm = editor.codemirror;
+              const selectedText = cm.getSelection() || translations.large_text;
+              const customHTML = `<b><p style="color:red;font-size:5rem;text-align:center">${selectedText}</p></b>`;
+              cm.replaceSelection(customHTML);
+            },
+            className: 'fa fa-s',
+            title: translations.super_text,
+          },
+          '|',
+          {
+            name: 'side-by-side',
+            action: EasyMDE.toggleSideBySide,
+            className: 'fa fa-columns no-disable no-mobile',
+            title: translations.side_by_side,
+          },
+          {
+            name: 'preview',
+            action: EasyMDE.togglePreview,
+            className: 'fa fa-eye no-disable',
+            title: translations.preview,
+          },
+          {
+            name: 'guide',
+            action: function () {
+              window.open(
+                `https://chatgpt.com?q=${encodeURIComponent(
+                  `What is Markdown, All about markdown syntax, answer me in "${navigator.language}" language`
+                )}`,
+                '_blank'
+              );
+            },
+            className: 'fa fa-question-circle',
+            title: translations.guide,
+          },
+          '|',
+          {
+            name: 'undo',
+            action: EasyMDE.undo,
+            className: 'fa fa-undo',
+            title: translations.undo,
+          },
+          {
+            name: 'redo',
+            action: EasyMDE.redo,
+            className: 'fa fa-repeat fa-redo',
+            title: translations.redo,
+          },
+        ],
+      });
+
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+      });
+
+      document
+        .querySelectorAll('.EasyMDEContainer .editor-toolbar button')
+        .forEach((btn) => btn.setAttribute('data-toggle', 'tooltip'));
+
+      reloadToolTips();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  init();
+
+  async function loadlanguage() {
+    let useLanguage = localStorage.getItem('use-language');
+    if (useLanguage) {
+      translations = await fetchLanguageData(useLanguage);
+      document
+        .getElementById('languageSelect')
+        .querySelectorAll('option')
+        .forEach((opt) => {
+          if (opt.value === useLanguage) opt.setAttribute('selected', true);
+        });
+      updateLanguageHtml(useLanguage);
+    } else {
+      translations = await fetchLanguageData('vi');
+    }
   }
 
   document
@@ -120,23 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ul.classList.add('animate');
     }
   });
-
-  (async function () {
-    let useLanguage = localStorage.getItem('use-language');
-    if (useLanguage) {
-      translations = await fetchLanguageData(useLanguage);
-      document
-        .getElementById('languageSelect')
-        .querySelectorAll('option')
-        .forEach((opt) => {
-          if (opt.value === useLanguage) opt.setAttribute('selected', true);
-        });
-      updateLanguageHtml(useLanguage);
-    } else {
-      translations = await fetchLanguageData('vi');
-    }
-  })('loadlanguage');
-
   function putNoteWithoutWait(note) {
     const transaction = db.transaction('notes', 'readwrite');
     const store = transaction.objectStore('notes');
@@ -240,13 +424,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const noteElement = document.createElement('div');
         noteElement.className = 'note-element col-6 col-md-4 col-lg-3';
         noteElement.setAttribute('data-note-id', note.id);
-        noteElement.innerHTML = `<input class="note-checkbox" id="note${note.id}" value="${note.id}" type="checkbox">
+        noteElement.innerHTML = `<input class="note-checkbox" id="note${
+          note.id
+        }" value="${note.id}" type="checkbox">
                     <div class="card" onclick="showNote(${note.id})">
                     <div class="card-body">
                         <h5 class="card-title">${note.titleText}</h5>
-                        <div class="card-text">${note.textContent}</div>
+                        <div class="card-text">${note.plainText.replace(
+                          note.titleText,
+                          ''
+                        )}</div>
                         <div class="d-flex justify-content-between align-items-center mt-2 mb-0">
-                            <p class="text-muted small mb-0">${note.dateString}</p>
+                            <p class="text-muted small mb-0">${
+                              note.dateString
+                            }</p>
                             <button
                               class="btn btn-danger btn-sm"
                               onclick="deleteNote(${note.id}, event)"
@@ -263,29 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
   }
-
-  const reloadToolTips = () => {
-    if (window.matchMedia('(hover: none)').matches) {
-      return;
-    }
-    let tooltipTriggerList = [].slice.call(
-      document.querySelectorAll('[data-toggle="tooltip"]')
-    );
-    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-      let tooltip = new bootstrap.Tooltip(tooltipTriggerEl);
-      let timer;
-      tooltipTriggerEl.addEventListener('mouseenter', () => {
-        tooltip.show();
-        timer = setTimeout(() => tooltip.hide(), 1500);
-      });
-
-      tooltipTriggerEl.addEventListener('mouseleave', () => {
-        clearTimeout(timer);
-        tooltip.hide();
-      });
-    });
-  };
-
   const Toast = Swal.mixin({
     toast: true,
     position: 'top',
@@ -302,17 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return function (...args) {
       clearTimeout(timer);
       timer = setTimeout(() => func.apply(this, args), delay);
-    };
-  }
-
-  function throttle(func, interval) {
-    let lastTime = 0;
-    return function (...args) {
-      const now = Date.now();
-      if (now - lastTime >= interval) {
-        lastTime = now;
-        func.apply(this, args);
-      }
     };
   }
 
@@ -337,11 +494,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('searchInput').addEventListener(
     'input',
     debounce((e) => {
-      let searchInNote = document.querySelector('.show-note');
       if (e.target.value.trim() === '') {
         document.getElementById('searchIcon').classList.remove('found');
         document.getElementById('searchIcon').classList.remove('not-found');
-        if (searchInNote.querySelector('.ql-container .ql-editor').innerHTML) {
+        if (searchInNote) {
           resetHighlight(searchInNote.querySelector('div'));
         } else {
           document
@@ -352,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       let query = e.target.value;
-      if (searchInNote.querySelector('.ql-container .ql-editor').innerHTML) {
+      if (searchInNote) {
         let container = searchInNote.querySelector('div');
         resetHighlight(container);
 
@@ -410,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const notes = event.target.result;
           notes.forEach((note) => {
             let title = note.titleText.toLowerCase();
-            let text = note.textContent.toLowerCase();
+            let text = note.plainText.toLowerCase();
 
             if (!text.includes(query) && !title.includes(query)) {
               //Not found
@@ -435,46 +591,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1000)
   );
 
-  let quill;
-  document.getElementById('quilljs').addEventListener(
-    'scroll',
-    throttle((e) => {
-      const toolbar = document.querySelector('#quilljs .ql-toolbar');
-      const containerRect = document
-        .querySelector('#quilljs')
-        .getBoundingClientRect();
-      const elementRect = toolbar.getBoundingClientRect();
-      if (elementRect.top < containerRect.top) {
-        toolbar.style.position = 'fixed';
-        toolbar.style.top = '0';
-        toolbar.style.width = '80%';
-        toolbar.style.zIndex = '10';
-        toolbar.style.backgroundColor = '#f1f1f1';
-      } else {
-        toolbar.style.position = 'relative';
-        toolbar.style.top = 'auto';
-        toolbar.style.background = 'none';
-      }
-    }, 200)
-  );
-
-  const toolbarOptions = [
-    [{ header: [1, 2, 3, 4, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    ['link'],
-    ['blockquote', 'code-block'],
-    [{ align: [] }],
-  ];
-
   document.getElementById('closePopup').addEventListener('click', () => {
     const popup = document.getElementById('popup');
     popup.classList.remove('show');
     popup.classList.add('hide');
     document.getElementById('updateNote').style.display = 'none';
-    document.getElementById('popupHeader').textContent = 'Ghi chú mới';
+    document.getElementById('popupHeader').textContent = translations.new_note;
   });
 
+  const closeFullscreen = () => {
+    if (!document.fullscreenElement) {
+      let iconElement = document.querySelector('#togglefullScreen i');
+      iconElement.classList.add('fa-up-right-and-down-left-from-center');
+      iconElement.classList.remove('fa-down-left-and-up-right-to-center');
+      document
+        .querySelectorAll('.show-note-toolbar button:not(#togglefullScreen)')
+        .forEach((btn) => (btn.disabled = false));
+    }
+  };
+
+  document.addEventListener('fullscreenchange', closeFullscreen);
+
+  document
+    .getElementById('togglefullScreen')
+    .addEventListener('click', function () {
+      if (!document.fullscreenElement) {
+        let showNoteDiv = document.querySelector('.show-note');
+        let iconElement = this.querySelector(':scope i');
+        if (showNoteDiv.requestFullscreen) {
+          showNoteDiv.requestFullscreen();
+        } else if (showNoteDiv.mozRequestFullScreen) {
+          showNoteDiv.mozRequestFullScreen();
+        } else if (showNoteDiv.webkitRequestFullscreen) {
+          showNoteDiv.webkitRequestFullscreen();
+        } else if (showNoteDiv.msRequestFullscreen) {
+          showNoteDiv.msRequestFullscreen();
+        }
+        iconElement.classList.remove('fa-up-right-and-down-left-from-center');
+        iconElement.classList.add('fa-down-left-and-up-right-to-center');
+        document
+          .querySelectorAll('.show-note-toolbar button:not(#togglefullScreen)')
+          .forEach((btn) => (btn.disabled = true));
+      } else {
+        document.exitFullscreen();
+        closeFullscreen();
+      }
+    });
+
+  let searchInNote = false;
   window.showNote = function (id) {
     let noteList = document.querySelector('.notes-list');
     noteList.style.overflowY = 'hidden';
@@ -494,90 +658,71 @@ document.addEventListener('DOMContentLoaded', () => {
       const note = event.target.result;
       const showNote = document.querySelector('.notes-list .show-note');
       showNote.classList.remove('d-none');
+
       showNote.querySelector('.updated').textContent = note.dateString;
-      showNote.querySelector('.ql-container .ql-editor').innerHTML =
-        note.content;
+
+      let htmlContent = marked.parse(note.markdownContent);
+      document.getElementById('output').innerHTML = htmlContent;
+
+      setTimeout(() => {
+        document.querySelectorAll('.output-note pre code').forEach((block) => {
+          hljs.highlightElement(block);
+          let language =
+            block.result?.language ||
+            block.className.replace('language-', '') ||
+            'Plain Text';
+          block.setAttribute('data-lang', language);
+        });
+        document.querySelectorAll('.output-note pre').forEach((pre) => {
+          pre.classList.add('code-block');
+          let copyBtn = document.createElement('button');
+          copyBtn.classList.add('copy-btn');
+          copyBtn.innerText = translations.copy;
+          copyBtn.addEventListener('click', function () {
+            let code = pre.querySelector('code').innerText;
+            navigator.clipboard
+              .writeText(code)
+              .then(() => {
+                copyBtn.innerText = translations.copied;
+                setTimeout(() => (copyBtn.innerText = translations.copy), 1500);
+              })
+              .catch((err) => {
+                console.error('Lỗi sao chép:', err);
+              });
+          });
+          pre.appendChild(copyBtn);
+        });
+      }, 10);
 
       document.getElementById('shareNote').onclick = function (event) {
         shareNote(note.id, event.target);
       };
+
       document.getElementById('showEdit').onclick = function () {
         editNote(note.id);
       };
+
       document.getElementById('showDelete').onclick = function () {
         document.querySelector('.notes-list').style = '';
         document
           .getElementById('searchInput')
           .setAttribute('placeholder', translations.placeholder_search);
-        showNote.querySelector('.ql-container .ql-editor').innerHTML = '';
         showNote.classList.add('d-none');
         deleteNote(note.id);
+        searchInNote = false;
       };
+
       document.getElementById('closeShow').onclick = function () {
         document.querySelector('.notes-list').style = '';
         document
           .getElementById('searchInput')
           .setAttribute('placeholder', translations.placeholder_search);
-        showNote.querySelector('.ql-container .ql-editor').innerHTML = '';
+        document.getElementById('output').innerHTML = '';
         showNote.classList.add('d-none');
+        searchInNote = false;
       };
 
-      const qlCodeBlockContainers = noteList
-        .querySelector('.ql-container')
-        .querySelector('.ql-editor')
-        .querySelectorAll('.ql-code-block-container');
-
-      qlCodeBlockContainers.forEach((qlCodeBlockContainer) => {
-        qlCodeBlockContainer.className = 'highlight-code-container';
-        const codeText = qlCodeBlockContainer.innerText
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        qlCodeBlockContainer.innerHTML = `
-      <div class="code-language">
-        <i class="fa-solid fa-code"></i>
-        <p></p>
-      </div>
-      <button class="copy-btn">Copy</button>
-      <pre><code>
-        ${codeText}
-      </code></pre>
-      `;
-        const codeContainer = qlCodeBlockContainer.querySelector('pre code');
-        hljs.highlightElement(codeContainer);
-        qlCodeBlockContainer.style.whiteSpace = 'nowrap';
-        qlCodeBlockContainer.style.fontSize = 'initial';
-        qlCodeBlockContainer.style.lineHeight = 'initial';
-
-        const languageCode = codeContainer.className.replace(
-          'hljs language-',
-          ''
-        );
-
-        if (languageCode !== 'undefined') {
-          qlCodeBlockContainer
-            .querySelector('.code-language')
-            .querySelector('p').textContent = languageCode;
-        }
-
-        document.querySelectorAll('.copy-btn').forEach((button) => {
-          button.addEventListener('click', () => {
-            const codeBlock = button.nextElementSibling.querySelector('code');
-            const codeText = codeBlock.innerText;
-
-            navigator.clipboard
-              .writeText(codeText)
-              .then(() => {
-                button.innerText = 'Copied!';
-                setTimeout(() => {
-                  button.innerText = 'Copy';
-                }, 2000);
-              })
-              .catch((err) => {
-                console.error('Error copying text: ', err);
-              });
-          });
-        });
-      });
+      searchInNote = true;
     };
   };
 
@@ -592,18 +737,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (popup.classList.contains('show')) {
         return;
       }
-      document.getElementById('quilljs').innerHTML = '<div id="editor"></div>';
       popup.classList.remove('hide');
       popup.classList.add('show');
-      quill = new Quill('#editor', {
-        modules: {
-          toolbar: toolbarOptions,
-        },
-        theme: 'snow',
-      });
-      quill.clipboard.dangerouslyPasteHTML(note.content);
+
+      easyMDE.value(note.markdownContent);
       document.getElementById('popupHeader').textContent =
         translations.edit_note;
+
       document.getElementById('addAndShare').style.display = 'none';
       const updateButton = document.getElementById('updateNote');
       updateButton.style.display = 'initial';
@@ -614,6 +754,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
+  function getFirstHeading(markdownText) {
+    let match = markdownText.match(/^#{1,6} (.+)/m);
+    return match ? match[1] : translations.no_title;
+  }
+
+  function getPlainText(markdownText) {
+    let htmlContent = marked.parse(markdownText);
+    let tempElement = document.createElement('div');
+    tempElement.innerHTML = htmlContent;
+    return tempElement.textContent || tempElement.innerText;
+  }
+
   window.updateNote = function (id) {
     const transaction = db.transaction('notes', 'readwrite');
     const store = transaction.objectStore('notes');
@@ -621,24 +773,9 @@ document.addEventListener('DOMContentLoaded', () => {
     request.onsuccess = function (event) {
       const { shared } = event.target.result;
 
-      let content = quill.root.innerHTML;
-      let parser = new DOMParser();
-      let doc = parser.parseFromString(content, 'text/html');
-
-      let titleElement =
-        doc.querySelector('h1') ||
-        doc.querySelector('h2') ||
-        doc.querySelector('h3') ||
-        doc.querySelector('h4');
-      let titleText, titleHTML;
-
-      if (titleElement) {
-        titleText = titleElement.textContent;
-        titleHTML = titleElement.outerHTML;
-        titleElement.remove();
-      }
-
-      let textContent = doc.body.innerText;
+      let markdownContent = easyMDE.value();
+      let firstHeading = getFirstHeading(markdownContent);
+      let plainText = getPlainText(markdownContent);
 
       let date = new Date();
       let formattedDate = date.toLocaleString('vi-VN', {
@@ -653,10 +790,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const note = {
         id,
-        titleText: titleText,
-        title: titleHTML,
-        textContent: textContent,
-        content: content,
+        titleText: firstHeading,
+        markdownContent,
+        plainText,
         dateString: formattedDate,
         isoDate: date,
         shared,
@@ -1106,7 +1242,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let importModal;
   let informationModal;
 
-  let _emptynote = true;
+  function isEditorEmpty() {
+    let markdownContent = easyMDE.value().trim();
+    let plainText = marked
+      .parse(markdownContent)
+      .replace(/<\/?[^>]+(>|$)/g, '')
+      .trim();
+
+    return plainText === '';
+  }
+
   window.sidebar = function (mode) {
     const popup = document.getElementById('popup');
     switch (mode) {
@@ -1115,24 +1260,9 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         document.getElementById('addAndShare').style.display = 'initial';
-        document.getElementById('quilljs').innerHTML =
-          '<div id="editor"></div>';
         popup.classList.remove('hide');
         popup.classList.add('show');
-        _emptynote = true;
-        quill = new Quill('#editor', {
-          modules: {
-            toolbar: toolbarOptions,
-          },
-          theme: 'snow',
-        });
-        quill.clipboard.dangerouslyPasteHTML(
-          `<h1>${translations.title}</h1><p>${translations.content}</p>`
-        );
-        quill.on('text-change', () => {
-          let currentText = quill.getText().trim();
-          _emptynote = currentText === '';
-        });
+        easyMDE.value('');
         break;
       case 'useCode':
         Swal.fire({
@@ -1266,25 +1396,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function newNote(id = null) {
     return new Promise((resolve, reject) => {
-      if (_emptynote) return;
+      if (isEditorEmpty()) return;
 
-      let content = quill.root.innerHTML;
-      let parser = new DOMParser();
-      let doc = parser.parseFromString(content, 'text/html');
-      let titleElement =
-        doc.querySelector('h1') ||
-        doc.querySelector('h2') ||
-        doc.querySelector('h3') ||
-        doc.querySelector('h4');
-      let titleText, titleHTML;
-
-      if (titleElement) {
-        titleText = titleElement.innerText;
-        titleHTML = titleElement.outerHTML;
-        titleElement.remove();
-      }
-
-      let textContent = doc.body.innerText;
+      let markdownContent = easyMDE.value();
+      let firstHeading = getFirstHeading(markdownContent);
+      let plainText = getPlainText(markdownContent);
 
       let date = new Date();
       let formattedDate = date.toLocaleString('vi-VN', {
@@ -1301,10 +1417,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const notes = {
         id: id,
-        titleText: titleText,
-        title: titleHTML,
-        textContent: textContent,
-        content: content,
+        titleText: firstHeading,
+        markdownContent,
+        plainText,
         dateString: formattedDate,
         isoDate: date,
         shared: false,
@@ -1345,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document
     .getElementById('addAndShare')
     .addEventListener('click', async (event) => {
-      if (_emptynote) return;
+      if (isEditorEmpty()) return;
       if (isOffline()) return;
       const btnEl = event.target;
       if (blockSpam) {

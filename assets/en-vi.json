@@ -1,6 +1,6 @@
 {
   "en": {
-    "online_note": "Quick notes",
+    "app_title": "Quick notes",
     "share_note": "Share Note",
     "enter_captcha": "Enter verification code to share",
     "placeholder_captcha": "Verification Code",
@@ -50,7 +50,7 @@
     "an_error": "An error occurred",
     "get_note_failed": "Failed to retrieve note",
     "error_details": "Error details:",
-    "search_in_note": "Find keywords in notes...",
+    "search_in_note": "Search in note...",
     "edit_note": "Edit note",
     "copy": "Copy",
     "copied": "Copied!",
@@ -103,11 +103,15 @@
     "guide": "Markdown Guide",
     "undo": "Undo",
     "redo": "Redo",
+    "image_description": "Image description",
+    "text_link": "Text containing link",
+    "column": "Column",
+    "data": "Data",
     "large_text": "The text is super large",
     "fullscreen_tooltip": "Full screen"
   },
   "vi": {
-    "online_note": "Ghi chú nhanh",
+    "app_title": "Ghi chú nhanh",
     "share_note": "Chia sẻ ghi chú",
     "enter_captcha": "Nhập mã xác minh để chia sẻ",
     "placeholder_captcha": "Mã xác minh",
@@ -157,7 +161,7 @@
     "an_error": "Có lỗi xảy ra",
     "get_note_failed": "Lấy ghi chú thất bại",
     "error_details": "Chi tiết lỗi:",
-    "search_in_note": "Tìm từ khóa trong ghi chú...",
+    "search_in_note": "Tìm kiếm trong ghi chú...",
     "edit_note": "Sửa ghi chú",
     "copy": "Sao chép",
     "copied": "Đã sao chép!",
@@ -206,10 +210,14 @@
     "horizontal_rule": "Dòng kẻ ngang",
     "side_by_side": "Chế độ song song",
     "super_text": "Chữ siêu to (HTML)",
-    "preview": "Hiện bản xem trước",
+    "preview": "Xem trước",
     "guide": "Tìm hiểu về Markdown",
     "undo": "Hoàn tác",
     "redo": "Làm lại",
+    "image_description": "Mô tả ảnh",
+    "text_link": "Văn bản chứa liên kết",
+    "column": "Cột",
+    "data": "Dữ liệu",
     "large_text": "Văn bản siêu to",
     "fullscreen_tooltip": "Toàn màn hình"
   }

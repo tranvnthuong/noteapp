@@ -10,8 +10,84 @@
     <meta
       name="description"
       content="Take quick notes, share online notes on all platforms (Ghi chú nhanh, ghi chú trực tuyến chia sẻ trên trên mọi nền tảng)"
+    />
     <meta name="author" content="thuongwbw" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    <link
+      rel="apple-touch-icon"
+      sizes="57x57"
+      href="assets/icon/apple-icon-57x57.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="60x60"
+      href="assets/icon/apple-icon-60x60.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="72x72"
+      href="assets/icon/apple-icon-72x72.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="76x76"
+      href="assets/icon/apple-icon-76x76.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="114x114"
+      href="assets/icon/apple-icon-114x114.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="120x120"
+      href="assets/icon/apple-icon-120x120.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="144x144"
+      href="assets/icon/apple-icon-144x144.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="152x152"
+      href="assets/icon/apple-icon-152x152.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="assets/icon/apple-icon-180x180.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="assets/icon/android-icon-192x192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="assets/icon/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      href="assets/icon/favicon-96x96.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="assets/icon/favicon-16x16.png"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta name="msapplication-TileImage" content="/ms-icon-144x144.png" />
+    <meta name="theme-color" content="#ffffff" />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
@@ -353,7 +429,7 @@
       </ul>
     </header>
     <main class="main-content">
-      <h1 data-i18n="online_note">Online Notes</h1>
+      <h1 data-i18n="app_title">Quick Notes</h1>
       <div class="search-box">
         <i id="searchIcon" class="fa fa-search"></i>
         <input
@@ -372,7 +448,7 @@
               id="enableFullscreen"
               data-toggle="tooltip"
               data-i18n="fullscreen_tooltip"
-              title="Phóng to"
+              title="Toàn màn hình"
             >
               <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
             </button>
@@ -480,11 +556,21 @@
       </div>
     </main>
     <div class="fullscreen-note d-none" id="fullscreenNote">
-      <button class="circle-button" id="closeFullscreen" data-toggle="tooltip" data-i18n="close_tooltip" title="Đóng toàn màn hình"><i class="fa-solid fa-xmark"></i></button>
+      <button
+        class="circle-button"
+        id="closeFullscreen"
+        data-i18n="close_tooltip"
+        data-toggle="tooltip"
+        data-i18n="close_tooltip"
+        title="Đóng"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
       <div class="render-note" id="renderNote"></div>
     </div>
     <footer>
-      <span><b>&copy; 2025 QuickNote. All rights reserved.</b></span>
+      <span><b>&copy; 2025 QuickNote. All rights reserved. </b></span>
+      <button id="installButton" style="display: none">Install app</button>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script
@@ -497,5 +583,36 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="assets/js/script.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+          .register('/assets/js/sw.js')
+          .then(() => console.log('✅ Service Worker'))
+          .catch((error) => console.error('❌ Service Worker:', error));
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        const installButton = document.getElementById('installButton');
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          installButton.style.display = 'block';
+        });
+        installButton.addEventListener('click', async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+              console.log('✅ Ứng dụng đã được cài đặt vào màn hình chính!');
+            } else {
+              console.log('❌ Đã hủy cài đặt ứng dụng!');
+            }
+            deferredPrompt = null;
+            installButton.style.display = 'none';
+          }
+        });
+      });
+    </script>
   </body>
 </html>

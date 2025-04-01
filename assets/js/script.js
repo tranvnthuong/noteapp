@@ -115,18 +115,33 @@ document.addEventListener('DOMContentLoaded', () => {
       sortNotesBy = sortNote;
       displayNotes(sortNotesBy);
       getNoteInUrlParameter();
-      await loadlanguage();
+
+      let useLanguage = localStorage.getItem('use-language');
+      if (useLanguage) {
+        translations = await fetchLanguageData(useLanguage);
+        document
+          .getElementById('languageSelect')
+          .querySelectorAll('option')
+          .forEach((opt) => {
+            if (opt.value === useLanguage) opt.setAttribute('selected', true);
+          });
+        updateLanguageHtml(useLanguage);
+      } else {
+        translations = await fetchLanguageData('vi');
+      }
+
       easyMDE = new EasyMDE({
         element: document.getElementById('editor'),
         spellChecker: false,
+        inputStyle: 'contenteditable',
         sideBySideFullscreen: false,
         placeholder: `# ${translations.title}\n${translations.content}`,
         insertTexts: {
           horizontalRule: ['', '\n\n---\n\n'],
-          image: ['![Mô tả ảnh](https://', ')'],
-          link: ['[Tên liên kết](https://', ')'],
+          image: [`![${translations.image_description}]`, '(https://)'],
+          link: [`[${translations.text_link}]`, '(https://)'],
           table: [
-            '\n\n|    Cột 1    |    Cột 2    |    Cột 3    |\n|   --------   |   --------   |   --------   |\n| Dữ liệu 1 | Dữ liệu 2 | Dữ liệu 3 |\n',
+            `\n\n|   ${translations.column} 1   |   ${translations.column} 2   |   ${translations.column} 3   |\n| --- | --- | --- |\n| ${translations.data} 1 | ${translations.data} 2 | ${translations.data} 3 |\n`,
             '\n',
           ],
         },
@@ -222,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             action: function (editor) {
               const cm = editor.codemirror;
               const selectedText = cm.getSelection() || translations.large_text;
-              const customHTML = `<b><p style="color:red;font-size:5rem;text-align:center">${selectedText}</p></b>`;
+              const customHTML = `<b><p style="color:red;font-size:8rem;text-align:center">${selectedText}</p></b>`;
               cm.replaceSelection(customHTML);
             },
             className: 'fa fa-s',
@@ -287,22 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   init();
 
-  async function loadlanguage() {
-    let useLanguage = localStorage.getItem('use-language');
-    if (useLanguage) {
-      translations = await fetchLanguageData(useLanguage);
-      document
-        .getElementById('languageSelect')
-        .querySelectorAll('option')
-        .forEach((opt) => {
-          if (opt.value === useLanguage) opt.setAttribute('selected', true);
-        });
-      updateLanguageHtml(useLanguage);
-    } else {
-      translations = await fetchLanguageData('vi');
-    }
-  }
-
   document
     .getElementById('languageSelect')
     .addEventListener('change', (event) => {
@@ -355,9 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function getNoteInUrlParameter() {
     const urlParams = new URLSearchParams(window.location.search);
-    const id = parseInt(urlParams.get('note'), 10);
+    const id = parseInt(urlParams.get('noteId'), 10);
     if (id) {
-      urlParams.delete('note');
+      urlParams.delete('noteId');
       history.pushState({}, '', window.location.pathname);
       const note = await getNote(id);
       if (note.found) {
@@ -404,7 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function displayNotes(sortBy = 'title') {
     const transaction = db.transaction('notes', 'readonly');
     const store = transaction.objectStore('notes');
-    //console.log("existing index names in store", store.indexNames);
     const index = store.index(sortBy);
 
     const request = index.getAll();
@@ -473,23 +471,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  function resetHighlight(container) {
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_ALL,
-      null,
-      false
-    );
-
-    while (walker.nextNode()) {
-      const currentNode = walker.currentNode;
-
-      if (currentNode.tagName === 'MARK') {
-        const textNode = document.createTextNode(currentNode.textContent);
-        currentNode.parentNode.replaceChild(textNode, currentNode);
-      }
-    }
-  }
+  const resetHighlight = () => {
+    const root = document.getElementById('output');
+    root.innerHTML = root.innerHTML.replace(/<mark>(.*?)<\/mark>/g, '$1');
+  };
 
   document.getElementById('searchInput').addEventListener(
     'input',
@@ -498,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('searchIcon').classList.remove('found');
         document.getElementById('searchIcon').classList.remove('not-found');
         if (searchInNote) {
-          resetHighlight(searchInNote.querySelector('div'));
+          resetHighlight();
         } else {
           document
             .querySelectorAll('[data-note-id]')
@@ -507,56 +492,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      let query = e.target.value;
+      let keyword = e.target.value;
       if (searchInNote) {
-        let container = searchInNote.querySelector('div');
-        resetHighlight(container);
-
+        resetHighlight();
+        const root = document.getElementById('output');
         const walker = document.createTreeWalker(
-          container,
+          root,
           NodeFilter.SHOW_TEXT,
           null,
           false
         );
 
+        let node;
+        const nodesToHighlight = [];
         let found = false;
-        while (walker.nextNode()) {
-          const currentNode = walker.currentNode;
-          if (
-            currentNode.nodeValue.toLowerCase().includes(query.toLowerCase())
-          ) {
-            const matchedText = currentNode.nodeValue;
 
-            const regex = new RegExp(`(${query})`, 'gi');
-            const highlightedText = matchedText.replace(
-              regex,
-              '<mark>$1</mark>'
-            );
-
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = highlightedText;
-
-            while (tempDiv.firstChild) {
-              currentNode.parentNode.insertBefore(
-                tempDiv.firstChild,
-                currentNode
-              );
-            }
-            currentNode.parentNode.removeChild(currentNode);
+        while ((node = walker.nextNode())) {
+          if (node.nodeValue.toLowerCase().includes(keyword.toLowerCase())) {
+            nodesToHighlight.push(node);
+            found = true;
             document.getElementById('searchIcon').classList.add('found');
             document.getElementById('searchIcon').classList.remove('not-found');
-            found = true;
+          }
+          if (!found) {
+            document.getElementById('searchIcon').classList.remove('found');
+            document.getElementById('searchIcon').classList.add('not-found');
           }
         }
 
-        if (!found) {
-          document.getElementById('searchIcon').classList.remove('found');
-          document.getElementById('searchIcon').classList.add('not-found');
-        }
+        nodesToHighlight.forEach((node) => {
+          const regex = new RegExp(`(${keyword})`, 'gi');
+          const newNode = document.createElement('span');
+          newNode.innerHTML = node.nodeValue.replace(regex, '<mark>$1</mark>');
+          node.parentNode.replaceChild(newNode, node);
+        });
 
-        const firstMatch = container.querySelector('mark');
-        if (firstMatch) {
-          firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const firstMark = document.querySelector('#output mark');
+        if (firstMark) {
+          firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       } else {
         const transaction = db.transaction('notes', 'readonly');
@@ -568,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let title = note.titleText.toLowerCase();
             let text = note.plainText.toLowerCase();
 
-            if (!text.includes(query) && !title.includes(query)) {
+            if (!text.includes(keyword) && !title.includes(keyword)) {
               //Not found
               document
                 .querySelector(`div[data-note-id="${note.id}"]`)
@@ -602,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('closeFullscreen').addEventListener('click', () => {
     document.getElementById('fullscreenNote').classList.add('d-none');
   });
-  
+
   document.getElementById('enableFullscreen').addEventListener('click', () => {
     document.getElementById('fullscreenNote').classList.remove('d-none');
   });
@@ -635,33 +608,41 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('renderNote').innerHTML = htmlContent;
 
       setTimeout(() => {
-        document.querySelectorAll('.output-note pre code, .render-note pre code').forEach((block) => {
-          hljs.highlightElement(block);
-          let language =
-            block.result?.language ||
-            block.className.replace('language-', '') ||
-            'Plain Text';
-          block.setAttribute('data-lang', language);
-        });
-        document.querySelectorAll('.output-note pre, .render-note pre').forEach((pre) => {
-          pre.classList.add('code-block');
-          let copyBtn = document.createElement('button');
-          copyBtn.classList.add('copy-btn');
-          copyBtn.innerText = translations.copy;
-          copyBtn.addEventListener('click', function () {
-            let code = pre.querySelector('code').innerText;
-            navigator.clipboard
-              .writeText(code)
-              .then(() => {
-                copyBtn.innerText = translations.copied;
-                setTimeout(() => (copyBtn.innerText = translations.copy), 1500);
-              })
-              .catch((err) => {
-                console.error('Lỗi sao chép:', err);
-              });
+        document
+          .querySelectorAll('.output-note pre code, .render-note pre code')
+          .forEach((block) => {
+            hljs.highlightElement(block);
+            let language =
+              block.result?.language ||
+              block.className.replace('language-', '') ||
+              'Plain Text';
+            block.setAttribute('data-lang', language);
           });
-          pre.appendChild(copyBtn);
-        });
+
+        document
+          .querySelectorAll('.output-note pre, .render-note pre')
+          .forEach((pre) => {
+            pre.classList.add('code-block');
+            let copyBtn = document.createElement('button');
+            copyBtn.classList.add('copy-btn');
+            copyBtn.innerText = translations.copy;
+            copyBtn.addEventListener('click', function () {
+              let code = pre.querySelector('code').innerText;
+              navigator.clipboard
+                .writeText(code)
+                .then(() => {
+                  copyBtn.innerText = translations.copied;
+                  setTimeout(
+                    () => (copyBtn.innerText = translations.copy),
+                    1500
+                  );
+                })
+                .catch((err) => {
+                  console.error('Lỗi sao chép:', err);
+                });
+            });
+            pre.appendChild(copyBtn);
+          });
       }, 10);
 
       document.getElementById('shareNote').onclick = function (event) {
@@ -870,7 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shareNotes.getIdNote();
           document.getElementById(
             'linkInput'
-          ).value = `${STATIC_REPOSITORY}?note=${shareNotes.getIdNote()}`;
+          ).value = `${STATIC_REPOSITORY}?noteId=${shareNotes.getIdNote()}`;
         } else if (
           idElement == listIdContainers[0] ||
           idElement == listIdContainers[1]
@@ -1690,5 +1671,143 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       return true;
     }
+  }
+
+  // const fetchAffiliateAPI = async () => {
+  //   try {
+  //     const response = await fetch(`${WEBSERVER}/affiliate`);
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! status: ${response.status}`);
+  //     }
+  //     const data = await response.json();
+  //     localStorage.setItem('affiliateData', JSON.stringify(data));
+  //     return data;
+  //   } catch (error) {
+  //     let affiliateData = localStorage.getItem('affiliateData') || '[]';
+  //     return JSON.parse(affiliateData);
+  //   }
+  // };
+
+  const fetchAffiliateAPI = async () => {
+    return {
+      expired: Date.now() + 1000 * 60 * 60 * 24 * 2,
+      listAffiliate: [
+        {
+          imageURL:
+            'https://cf.shopee.vn/file/vn-11134258-7ra0g-m801wyxqitf253.webp',
+          title: '',
+          linkURL: 'https://example.com/2',
+        },
+        {
+          imageURL:
+            'https://down-vn.img.susercontent.com/file/vn-11134258-7ra0g-m7v7fjtc1d37da.webp',
+          title: 'Ngàu hội đồ ăn',
+          linkURL: 'https://example.com/2',
+        },
+        {
+          imageURL:
+            'https://down-vn.img.susercontent.com/file/vn-11134258-7ra0g-m7v7fjtc1d37da.webp',
+          title: 'Ngàu hội đồ ăn',
+          linkURL: 'https://example.com/2',
+        },
+        {
+          imageURL:
+            'https://down-vn.img.susercontent.com/file/vn-11134258-7ra0g-m7v7fjtc1d37da.webp',
+          title: 'Ngàu hội đồ ăn',
+          linkURL: 'https://example.com/2',
+        },
+        {
+          imageURL: '',
+          title: 'Affiliate 5',
+          linkURL: 'https://example.com/5',
+        },
+      ],
+    };
+  };
+
+  const clickAffiliate = (affiliate) => {
+    window.open(affiliate.linkURL, '_blank');
+    fetch(`${WEBSERVER}/click-affiliate/${affiliate.id}`)
+      .then((response) => {
+        if (!response.ok) {
+          console.error('Error fetching affiliate data:', response.statusText);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching affiliate data', error);
+      });
+  };
+
+  const loadAffiliate = async () => {
+    if (isOffline()) return;
+    let affiliateData = localStorage.getItem('affiliateData') || '[]';
+    if (affiliateData.expired < Date.now() || affiliateData === '[]') {
+      affiliateData = await fetchAffiliateAPI();
+    }
+    let randomData =
+      affiliateData.listAffiliate[
+        Math.floor(Math.random() * affiliateData.listAffiliate.length)
+      ];
+
+    document.getElementById('affiliateContent')?.remove();
+    const affiliateContent = document.createElement('div');
+    affiliateContent.className = 'affiliate-content';
+    affiliateContent.id = 'affiliateContent';
+    affiliateContent.innerHTML = `
+      <div>
+        <button id="closeAffiliate">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="affiliateBanner"></div>
+      </div>
+      `;
+    document.body.appendChild(affiliateContent);
+
+    let affiliateBanner = document.getElementById('affiliateBanner');
+    affiliateBanner.innerHTML = '';
+    let imgElement = document.createElement('img');
+    if (randomData.imageURL) {
+      imgElement.src = randomData.imageURL;
+      imgElement.alt = randomData.title;
+      let titleElement = document.createElement('p');
+      titleElement.textContent = randomData.title;
+      imgElement.onclick = () => {
+        clickAffiliate(randomData);
+      };
+      titleElement.onclick = () => {
+        clickAffiliate(randomData);
+      };
+      affiliateBanner.appendChild(imgElement);
+      affiliateBanner.appendChild(titleElement);
+    } else {
+      imgElement.src = 'assets/shopee-aff1.webp';
+      imgElement.alt = 'Affiliate Banner';
+      affiliateBanner.appendChild(imgElement);
+      imgElement.onclick = () => {
+        clickAffiliate(randomData);
+      };
+    }
+
+    if (Math.random() < 0.3) {
+      document.getElementById('closeAffiliate').onclick = () => {
+        clickAffiliate(randomData);
+        affiliateContent.remove();
+      };
+      affiliateContent.onclick = () => {
+        clickAffiliate(randomData);
+      };
+    } else {
+      document.getElementById('closeAffiliate').onclick = () => {
+        affiliateContent.remove();
+      };
+    }
+  };
+
+  setInterval(loadAffiliate, 1000 * 120);
+
+  if (Math.random() < 0.5) {
+    setTimeout(() => {
+      loadAffiliate();
+    }, Math.floor(Math.random() * 8000)); // 0-8s
   }
 });
